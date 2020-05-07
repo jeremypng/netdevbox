@@ -4,6 +4,8 @@
 
 Brings up an Ubuntu server, Installs MicroK8s snap, Installs Vault Helm chart, manual steps to initialize and unseal Vault
 
+Pre-reqs: virtual-box, vagrant
+
 1. Edit vault-override-values.yaml to reflect local vault DNS name if ingress is needed, NodePort should work for now
 2. Run vagrant up
 3. Run vagrant ssh

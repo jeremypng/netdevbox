@@ -84,8 +84,8 @@ Vagrant.configure("2") do |config|
     microk8s.kubectl -n kube-system describe $(microk8s.kubectl -n kube-system get secret -n kube-system -o name | grep namespace) | grep token:
     microk8s.kubectl -n kube-system get service|grep kubernetes-dashboard|awk '{print $5}'|sed -e 's|443:\([0-9]*\)\/TCP|\1|'|awk '{print "Dashboard URL http://192.168.33.10:" $1}'
     echo "Installing Hashicorp Vault"
-    # microk8s helm3 install vault https://github.com/hashicorp/vault-helm/archive/v0.5.0.tar.gz
-    microk8s helm3 install --values=/vagrant/vault-override-values.yaml vault /vagrant/vault-helm
+    microk8s helm3 install --values=/vagrant/vault-override-values.yaml vault https://github.com/hashicorp/vault-helm/archive/v0.5.0.tar.gz
+    # microk8s helm3 install --values=/vagrant/vault-override-values.yaml vault /vagrant/vault-helm
     echo "Adding Vagrant user to MicroK8s admins"
     usermod -a -G microk8s vagrant
     chown -f -R vagrant /home/vagrant/.kube
