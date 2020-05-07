@@ -13,6 +13,7 @@ Vagrant.configure("2") do |config|
   # Every Vagrant development environment requires a box. You can search for
   # boxes at https://vagrantcloud.com/search.
   config.vm.box = "ubuntu/bionic64"
+  config.vm.hostname = "netdevbox"
 
   # Disable automatic box update checking. If you disable this, then
   # boxes will only be checked for updates when the user runs
@@ -61,7 +62,7 @@ Vagrant.configure("2") do |config|
     # Customize the amount of memory on the VM:
     vb.memory = "4096"
     vb.cpus = 4
-    vb.name = "csbps-netmon"
+    vb.name = "netdevbox"
   end
   #
   # View the documentation for the provider you are using for more
@@ -73,6 +74,8 @@ Vagrant.configure("2") do |config|
   config.vm.provision "shell", inline: <<-SHELL
     # apt-get update
     # apt-get install -y apache2
+    echo "Sleeping 10"
+    sleep 10
     echo "Installing MicroK8s"
     snap install microk8s --classic
     echo "Enabling dashboard dns storage ingress helm3"
@@ -83,11 +86,32 @@ Vagrant.configure("2") do |config|
     echo "Dashboard token"
     microk8s.kubectl -n kube-system describe $(microk8s.kubectl -n kube-system get secret -n kube-system -o name | grep namespace) | grep token:
     microk8s.kubectl -n kube-system get service|grep kubernetes-dashboard|awk '{print $5}'|sed -e 's|443:\([0-9]*\)\/TCP|\1|'|awk '{print "Dashboard URL http://192.168.33.10:" $1}'
+    echo "Creating netdevbox namespace"
+    microk8s.kubectl create namespace netdevbox
+    microk8s.kubectl config set-context --current --namespace=netdevbox
     echo "Installing Hashicorp Vault"
     microk8s helm3 install --values=/vagrant/vault-override-values.yaml vault https://github.com/hashicorp/vault-helm/archive/v0.5.0.tar.gz
-    # microk8s helm3 install --values=/vagrant/vault-override-values.yaml vault /vagrant/vault-helm
     echo "Adding Vagrant user to MicroK8s admins"
     usermod -a -G microk8s vagrant
     chown -f -R vagrant /home/vagrant/.kube
+    echo "Waiting for Vault to come online"
+    VAULT0_STATUS=`microk8s.kubectl get pods|grep vault-0|awk '{print $3}'`
+    while [ $VAULT0_STATUS != "Running" ]
+      do
+        sleep 10
+        VAULT0_STATUS=`microk8s.kubectl get pods|grep vault-0|awk '{print $3}'`
+        echo "Vault status=$VAULT0_STATUS" 
+      done
+    echo "Vault status=$VAULT0_STATUS" 
+    echo "Initializing Vault"
+    microk8s.kubectl exec -i vault-0 -- vault operator init > /vagrant/vault-seals.txt
+    microk8s.kubectl get service|grep vault-ui|awk '{print $5}'|sed -e 's|8200:\([0-9]*\)\/TCP|\1|'|awk '{print "Vault URL http://192.168.33.10:" $1}'  >> /vagrant/vault-seals.txt
+    cat /vagrant/vault-seals.txt
+    echo "Unsealing Vault"
+    microk8s.kubectl exec -i vault-0 -- vault operator unseal `cat /vagrant/vault-seals.txt |grep "Key 1"|awk '{print $4}'`
+    microk8s.kubectl exec -i vault-0 -- vault operator unseal `cat /vagrant/vault-seals.txt |grep "Key 2"|awk '{print $4}'`
+    microk8s.kubectl exec -i vault-0 -- vault operator unseal `cat /vagrant/vault-seals.txt |grep "Key 3"|awk '{print $4}'`
+
+
   SHELL
 end
