@@ -60,7 +60,7 @@ Vagrant.configure("2") do |config|
     vb.gui = true
  
     # Customize the amount of memory on the VM:
-    vb.memory = "4096"
+    vb.memory = "8192"
     vb.cpus = 4
     vb.name = "netdevbox"
   end
@@ -122,8 +122,21 @@ Vagrant.configure("2") do |config|
     cp vault /usr/local/sbin
     VAULT_ROOT_TOKEN=`cat /vagrant/vault-seals.txt |grep "^Initial Root Token"|awk '{print $4}'`
     vault login $VAULT_ROOT_TOKEN
+    echo "Adding admin and provisioner policies to Vault"
     vault policy write admin admin-policy.hcl
     vault policy write provisioner provisioner-policy.hcl
+    echo "Enabling v2 secrets engine for Vault"
+    vault secrets enable -path=secret -description="static versioned KV store" kv-v2
+    echo "Adding Bitnami repo to Helm3"
+    microk8s helm3 repo add bitnami https://charts.bitnami.com/bitnami
+    echo "Installing Postgresql"
+    PG_PASSWORD="`openssl rand -base64 20`"
+    vault kv put secret/netdevbox/postgresql user="postgres" password="$PG_PASSWORD"
+    microk8s helm3 install postgres -f /vagrant/postgres-override-values.yaml --set postgresqlPassword=$PG_PASSWORD,postgresqlDatabase=netbox bitnami/postgresql
+    
+
+    
+
 
 
 
