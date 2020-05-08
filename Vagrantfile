@@ -72,7 +72,7 @@ Vagrant.configure("2") do |config|
   # Ansible, Chef, Docker, Puppet and Salt are also available. Please see the
   # documentation for more information about their specific syntax and use.
   config.vm.provision "shell", inline: <<-SHELL
-    # apt-get update
+    apt-get update
     # apt-get install -y apache2
     echo "Sleeping 10"
     sleep 10
@@ -89,6 +89,7 @@ Vagrant.configure("2") do |config|
     echo "Creating netdevbox namespace"
     microk8s.kubectl create namespace netdevbox
     microk8s.kubectl config set-context --current --namespace=netdevbox
+    echo "microk8s.kubectl config set-context --current --namespace=netdevbox" >> /home/vagrant/.bashrc
     echo "Installing Hashicorp Vault"
     microk8s helm3 install --values=/vagrant/vault-override-values.yaml vault https://github.com/hashicorp/vault-helm/archive/v0.5.0.tar.gz
     echo "Adding Vagrant user to MicroK8s admins"
@@ -105,12 +106,26 @@ Vagrant.configure("2") do |config|
     echo "Vault status=$VAULT0_STATUS" 
     echo "Initializing Vault"
     microk8s.kubectl exec -i vault-0 -- vault operator init > /vagrant/vault-seals.txt
-    microk8s.kubectl get service|grep vault-ui|awk '{print $5}'|sed -e 's|8200:\([0-9]*\)\/TCP|\1|'|awk '{print "Vault URL http://192.168.33.10:" $1}'  >> /vagrant/vault-seals.txt
+    VAULT_ADDR=`microk8s.kubectl get service|grep vault-ui|awk '{print $5}'|sed -e 's|8200:\([0-9]*\)\/TCP|\1|'|awk '{print "http://192.168.33.10:" $1}'`
+    echo "Vault URL $VAULT_ADDR"  >> /vagrant/vault-seals.txt
+    echo "export VAULT_ADDR=\"$VAULT_ADDR\"" >> /home/vagrant/.bashrc
     cat /vagrant/vault-seals.txt
     echo "Unsealing Vault"
     microk8s.kubectl exec -i vault-0 -- vault operator unseal `cat /vagrant/vault-seals.txt |grep "Key 1"|awk '{print $4}'`
     microk8s.kubectl exec -i vault-0 -- vault operator unseal `cat /vagrant/vault-seals.txt |grep "Key 2"|awk '{print $4}'`
     microk8s.kubectl exec -i vault-0 -- vault operator unseal `cat /vagrant/vault-seals.txt |grep "Key 3"|awk '{print $4}'`
+    echo "Setting up vault env"
+    apt-get install unzip
+    wget -P /home/vagrant https://releases.hashicorp.com/vault/1.4.1/vault_1.4.1_linux_amd64.zip
+    cd /home/vagrant
+    unzip vault_1.4.1_linux_amd64.zip
+    cp vault /usr/local/sbin
+    VAULT_ROOT_TOKEN=`cat /vagrant/vault-seals.txt |grep "^Initial Root Token"|awk '{print $4}'`
+    vault login $VAULT_ROOT_TOKEN
+    vault policy write admin admin-policy.hcl
+    vault policy write provisioner provisioner-policy.hcl
+
+
 
 
   SHELL
