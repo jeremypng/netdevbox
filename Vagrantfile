@@ -38,12 +38,12 @@ Vagrant.configure("2") do |config|
 
   # Create a private network, which allows host-only access to the machine
   # using a specific IP.
-  config.vm.network "private_network", ip: "192.168.33.10"
+  # config.vm.network "private_network", ip: "192.168.33.10"
 
   # Create a public network, which generally matched to bridged network.
   # Bridged networks make the machine appear as another physical device on
   # your network.
-  # config.vm.network "public_network"
+  config.vm.network "public_network"
 
   # Share an additional folder to the guest VM. The first argument is
   # the path on the host to the actual folder. The second argument is
@@ -87,7 +87,7 @@ Vagrant.configure("2") do |config|
     microk8s.kubectl -n kube-system describe $(microk8s.kubectl -n kube-system get secret -n kube-system -o name | grep namespace) | grep token: > k8s-dashboard-info.txt
     K8S_DASH_ARG5=`microk8s.kubectl -n kube-system get service|grep kubernetes-dashboard|awk '{print $5}'`
     K8S_DASH_PORT=${K8S_DASH_ARG5:5:5}     
-    echo "Dashboard URL http://192.168.33.10:$K8S_DASH_PORT" > k8s-dashboard-info.txt
+    echo "Dashboard URL http://127.0.0.1:$K8S_DASH_PORT" > k8s-dashboard-info.txt
     echo "Creating netdevbox namespace"
     microk8s.kubectl create namespace netdevbox
     microk8s.kubectl config set-context --current --namespace=netdevbox
@@ -116,12 +116,11 @@ Vagrant.configure("2") do |config|
     echo $VAULT_ARG5
     VAULT_PORT=${VAULT_ARG5:5:5}
     echo $VAULT_PORT
-    export VAULT_ADDR=`echo $VAULT_PORT|awk '{print "http://192.168.33.10:" $1}'`
+    export VAULT_ADDR=`echo $VAULT_PORT|awk '{print "\"http://127.0.0.1:" $1 "\""}'`
     echo $VAULT_ADDR
     echo "Vault URL $VAULT_ADDR"  >> /vagrant/vault-seals.txt
     echo "export VAULT_ADDR=\"$VAULT_ADDR\"" >> /home/vagrant/.bashrc
     cat /vagrant/vault-seals.txt
-    sleep 60
     echo "Unsealing Vault"
     microk8s.kubectl exec -i vault-0 -- vault operator unseal `cat /vagrant/vault-seals.txt |grep "Key 1"|awk '{print $4}'`
     microk8s.kubectl exec -i vault-0 -- vault operator unseal `cat /vagrant/vault-seals.txt |grep "Key 2"|awk '{print $4}'`
@@ -145,13 +144,41 @@ Vagrant.configure("2") do |config|
     PG_PASSWORD="`openssl rand -base64 20`"
     vault kv put secret/netdevbox/postgresql user="postgres" password="$PG_PASSWORD"
     microk8s helm3 install postgres -f /vagrant/postgres-override-values.yaml --set postgresqlPassword=$PG_PASSWORD,postgresqlDatabase=netbox bitnami/postgresql
-    
-
-    
-
-
-
-
+    echo "Enabling database secrets engine for Vault"
+    vault secrets enable database
+    echo "Waiting for Postgres to come online"
+    while [ (( $PG_READY_COUNT < 4 )) ]
+      do
+        sleep 10
+        PG_READY_ARR=`microk8s.kubectl get pods|grep postgres|awk '{print $2}'`
+        PG_READY_COUNT=0
+        for pg in $PG_READY_ARR
+          do
+            PG_READY_COUNT=$(($PG_READY_COUNT + ${pg:0:1}));
+          done  
+        echo "Postgres pods ready (target 4): $PG_READY_COUNT"
+    echo "Adding netbox-app role to Vault"
+    vault write database/roles/netbox-app \
+      db_name=netbox \
+      creation_statements="CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}'; \
+                           GRANT ALL PRIVILEGES ON DATABASE netbox TO \"{{name}}\";" \
+      revocation_statements="ALTER ROLE \"{{name}}\" NOLOGIN;"\
+      default_ttl="1h" \
+      max_ttl="24h"
+    echo "Adding netbox connection config to Vault"
+    vault write database/config/netbox \
+      plugin_name=postgresql-database-plugin \
+      allowed_roles="*" \
+      connection_url="postgresql://{{username}}:{{password}}@postgres-postgresql:5432/netbox?sslmode=disable" \
+      username="postgres" \
+      password="$PG_PASSWORD"
+    echo "Rotating root postgres password"
+    vault write --force /database/rotate-root/netbox
 
   SHELL
+
+# delete default gw on eth0
+  config.vm.provision "shell",
+    run: "always",
+    inline: "eval `route -n | awk '{ if ($8 ==\"enp0s3\" && $2 != \"0.0.0.0\") print \"route del default gw \" $2; }'`"
 end
