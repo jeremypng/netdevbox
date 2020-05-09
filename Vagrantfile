@@ -57,7 +57,7 @@ Vagrant.configure("2") do |config|
   #
   config.vm.provider "virtualbox" do |vb|
     # Display the VirtualBox GUI when booting the machine
-    vb.gui = true
+    vb.gui = false
  
     # Customize the amount of memory on the VM:
     vb.memory = "8192"
@@ -84,8 +84,10 @@ Vagrant.configure("2") do |config|
     microk8s.kubectl get service kubernetes-dashboard -n kube-system -o yaml | sed -e 's|type\: ClusterIP|type\: NodePort|' > /vagrant/kubernetes-dashboard.yml
     microk8s.kubectl apply -f /vagrant/kubernetes-dashboard.yml
     echo "Dashboard token"
-    microk8s.kubectl -n kube-system describe $(microk8s.kubectl -n kube-system get secret -n kube-system -o name | grep namespace) | grep token:
-    microk8s.kubectl -n kube-system get service|grep kubernetes-dashboard|awk '{print $5}'|sed -e 's|443:\([0-9]*\)\/TCP|\1|'|awk '{print "Dashboard URL http://192.168.33.10:" $1}'
+    microk8s.kubectl -n kube-system describe $(microk8s.kubectl -n kube-system get secret -n kube-system -o name | grep namespace) | grep token: > k8s-dashboard-info.txt
+    K8S_DASH_ARG5=`microk8s.kubectl -n kube-system get service|grep kubernetes-dashboard|awk '{print $5}'`
+    K8S_DASH_PORT=${K8S_DASH_ARG5:5:5}     
+    echo "Dashboard URL http://192.168.33.10:$K8S_DASH_PORT" > k8s-dashboard-info.txt
     echo "Creating netdevbox namespace"
     microk8s.kubectl create namespace netdevbox
     microk8s.kubectl config set-context --current --namespace=netdevbox
@@ -95,7 +97,8 @@ Vagrant.configure("2") do |config|
     echo "Adding Vagrant user to MicroK8s admins"
     usermod -a -G microk8s vagrant
     chown -f -R vagrant /home/vagrant/.kube
-    echo "Waiting for Vault to come online"
+    echo "Waiting for Vault to come online, sleeping 30"
+    sleep 30
     VAULT0_STATUS=`microk8s.kubectl get pods|grep vault-0|awk '{print $3}'`
     while [ $VAULT0_STATUS != "Running" ]
       do
@@ -104,12 +107,21 @@ Vagrant.configure("2") do |config|
         echo "Vault status=$VAULT0_STATUS" 
       done
     echo "Vault status=$VAULT0_STATUS" 
+    echo "Sleeping 30"
     echo "Initializing Vault"
     microk8s.kubectl exec -i vault-0 -- vault operator init > /vagrant/vault-seals.txt
-    VAULT_ADDR=`microk8s.kubectl get service|grep vault-ui|awk '{print $5}'|sed -e 's|8200:\([0-9]*\)\/TCP|\1|'|awk '{print "http://192.168.33.10:" $1}'`
+    VAULT_STATUS=`microk8s.kubectl get service|grep vault-ui`
+    echo $VAULT_STATUS
+    VAULT_ARG5=`echo $VAULT_STATUS|awk '{print $5}'`
+    echo $VAULT_ARG5
+    VAULT_PORT=${VAULT_ARG5:5:5}
+    echo $VAULT_PORT
+    export VAULT_ADDR=`echo $VAULT_PORT|awk '{print "http://192.168.33.10:" $1}'`
+    echo $VAULT_ADDR
     echo "Vault URL $VAULT_ADDR"  >> /vagrant/vault-seals.txt
     echo "export VAULT_ADDR=\"$VAULT_ADDR\"" >> /home/vagrant/.bashrc
     cat /vagrant/vault-seals.txt
+    sleep 60
     echo "Unsealing Vault"
     microk8s.kubectl exec -i vault-0 -- vault operator unseal `cat /vagrant/vault-seals.txt |grep "Key 1"|awk '{print $4}'`
     microk8s.kubectl exec -i vault-0 -- vault operator unseal `cat /vagrant/vault-seals.txt |grep "Key 2"|awk '{print $4}'`
@@ -123,8 +135,8 @@ Vagrant.configure("2") do |config|
     VAULT_ROOT_TOKEN=`cat /vagrant/vault-seals.txt |grep "^Initial Root Token"|awk '{print $4}'`
     vault login $VAULT_ROOT_TOKEN
     echo "Adding admin and provisioner policies to Vault"
-    vault policy write admin admin-policy.hcl
-    vault policy write provisioner provisioner-policy.hcl
+    vault policy write admin /vagrant/vault-policies/admin-policy.hcl
+    vault policy write provisioner /vagrant/vault-policies/provisioner-policy.hcl
     echo "Enabling v2 secrets engine for Vault"
     vault secrets enable -path=secret -description="static versioned KV store" kv-v2
     echo "Adding Bitnami repo to Helm3"
