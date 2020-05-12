@@ -140,40 +140,6 @@ Vagrant.configure("2") do |config|
     vault secrets enable -path=secret -description="static versioned KV store" kv-v2
     echo "Adding Bitnami repo to Helm3"
     microk8s helm3 repo add bitnami https://charts.bitnami.com/bitnami
-    echo "Installing Postgresql"
-    PG_PASSWORD="`openssl rand -base64 20`"
-    vault kv put secret/netdevbox/postgresql user="postgres" password="$PG_PASSWORD"
-    microk8s helm3 install netbox-pg -f /vagrant/postgres-override-values.yaml --set postgresqlPassword=$PG_PASSWORD,postgresqlDatabase=netbox bitnami/postgresql
-    echo "Enabling database secrets engine for Vault"
-    vault secrets enable database
-    echo "Waiting for Postgres to come online"
-    while [ (( $PG_READY_COUNT < 4 )) ]
-      do
-        sleep 10
-        PG_READY_ARR=`microk8s.kubectl get pods|grep postgres|awk '{print $2}'`
-        PG_READY_COUNT=0
-        for pg in $PG_READY_ARR
-          do
-            PG_READY_COUNT=$(($PG_READY_COUNT + ${pg:0:1}));
-          done  
-        echo "Postgres pods ready (target 4): $PG_READY_COUNT"
-    echo "Adding netbox-app role to Vault"
-    vault write database/roles/netbox-app \
-      db_name=netbox \
-      creation_statements="CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}'; \
-                           GRANT ALL PRIVILEGES ON DATABASE netbox TO \"{{name}}\";" \
-      revocation_statements="ALTER ROLE \"{{name}}\" NOLOGIN;"\
-      default_ttl="1h" \
-      max_ttl="24h"
-    echo "Adding netbox connection config to Vault"
-    vault write database/config/netbox \
-      plugin_name=postgresql-database-plugin \
-      allowed_roles="*" \
-      connection_url="postgresql://{{username}}:{{password}}@postgres-postgresql:5432/netbox?sslmode=disable" \
-      username="postgres" \
-      password="$PG_PASSWORD"
-    echo "Rotating root postgres password"
-    vault write --force /database/rotate-root/netbox
     echo "Enabling Kubernetes authentication to Vault"
     vault auth enable kubernetes
     echo "Logging into vault on vault pod"
@@ -185,9 +151,7 @@ Vagrant.configure("2") do |config|
        token_reviewer_jwt="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" \
        kubernetes_host=https://${KUBERNETES_PORT_443_TCP_ADDR}:443 \
        kubernetes_ca_cert=@/var/run/secrets/kubernetes.io/serviceaccount/ca.crt'
-    echo "Creating Vault Policy for Netbox App"
-    vault policy write netbox ./config/netbox-app.hcl
-    
+
     
 
   SHELL
