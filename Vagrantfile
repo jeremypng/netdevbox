@@ -116,7 +116,7 @@ Vagrant.configure("2") do |config|
     echo $VAULT_ARG5
     VAULT_PORT=${VAULT_ARG5:5:5}
     echo $VAULT_PORT
-    export VAULT_ADDR=`echo $VAULT_PORT|awk '{print "\"http://127.0.0.1:" $1 "\""}'`
+    export VAULT_ADDR=`echo $VAULT_PORT|awk '{print "\"http\://127.0.0.1\:" $1 "\""}'`
     echo $VAULT_ADDR
     echo "Vault URL $VAULT_ADDR"  >> /vagrant/vault-seals.txt
     echo "export VAULT_ADDR=\"$VAULT_ADDR\"" >> /home/vagrant/.bashrc
@@ -142,11 +142,9 @@ Vagrant.configure("2") do |config|
     microk8s helm3 repo add bitnami https://charts.bitnami.com/bitnami
     echo "Enabling Kubernetes authentication to Vault"
     vault auth enable kubernetes
-    echo "Logging into vault on vault pod"
-    microk8s.kubectl exec $(microk8s.kubectl get pods --selector "app.kubernetes.io/instance=vault,component=server" -o jsonpath="{.items[0].metadata.name}") -c vault --   sh -c ' \
-    vault login $VAULT_ROOT_TOKEN'
     echo "Adding K8S config to Vault"
     microk8s.kubectl exec $(microk8s.kubectl get pods --selector "app.kubernetes.io/instance=vault,component=server" -o jsonpath="{.items[0].metadata.name}") -c vault --   sh -c ' \
+    vault login $VAULT_ROOT_TOKEN && \
     vault write auth/kubernetes/config \
        token_reviewer_jwt="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" \
        kubernetes_host=https://${KUBERNETES_PORT_443_TCP_ADDR}:443 \
