@@ -143,7 +143,7 @@ Vagrant.configure("2") do |config|
     echo "Installing Postgresql"
     PG_PASSWORD="`openssl rand -base64 20`"
     vault kv put secret/netdevbox/postgresql user="postgres" password="$PG_PASSWORD"
-    microk8s helm3 install postgres -f /vagrant/postgres-override-values.yaml --set postgresqlPassword=$PG_PASSWORD,postgresqlDatabase=netbox bitnami/postgresql
+    microk8s helm3 install netbox-pg -f /vagrant/postgres-override-values.yaml --set postgresqlPassword=$PG_PASSWORD,postgresqlDatabase=netbox bitnami/postgresql
     echo "Enabling database secrets engine for Vault"
     vault secrets enable database
     echo "Waiting for Postgres to come online"
@@ -174,6 +174,21 @@ Vagrant.configure("2") do |config|
       password="$PG_PASSWORD"
     echo "Rotating root postgres password"
     vault write --force /database/rotate-root/netbox
+    echo "Enabling Kubernetes authentication to Vault"
+    vault auth enable kubernetes
+    echo "Logging into vault on vault pod"
+    microk8s.kubectl exec $(microk8s.kubectl get pods --selector "app.kubernetes.io/instance=vault,component=server" -o jsonpath="{.items[0].metadata.name}") -c vault --   sh -c ' \
+    vault login $VAULT_ROOT_TOKEN'
+    echo "Adding K8S config to Vault"
+    microk8s.kubectl exec $(microk8s.kubectl get pods --selector "app.kubernetes.io/instance=vault,component=server" -o jsonpath="{.items[0].metadata.name}") -c vault --   sh -c ' \
+    vault write auth/kubernetes/config \
+       token_reviewer_jwt="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" \
+       kubernetes_host=https://${KUBERNETES_PORT_443_TCP_ADDR}:443 \
+       kubernetes_ca_cert=@/var/run/secrets/kubernetes.io/serviceaccount/ca.crt'
+    echo "Creating Vault Policy for Netbox App"
+    vault policy write netbox ./config/netbox-app.hcl
+    
+    
 
   SHELL
 

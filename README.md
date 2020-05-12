@@ -20,4 +20,5 @@ Pre-reqs: virtual-box, vagrant
    7. Read documentation for further vault usage
 6.  Test access to Kubernets dashboard via URL in vagrant up output
 7.  Test access to Grafana dashboard via http://192.168.33.10:16443
+   1. user/pass in cat /var/snap/microk8s/current/credentials/basic_auth.csv
 8.  Postgres tbd
