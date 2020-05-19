@@ -33,6 +33,7 @@ metadata:
         f:type: {}
     manager: kubectl
     operation: Update
+<<<<<<< HEAD
     time: "2020-05-18T20:26:07Z"
   name: kubernetes-dashboard
   namespace: kube-system
@@ -41,6 +42,16 @@ metadata:
   uid: ebfa8c45-311f-4ef7-a0a3-16a0a87da84a
 spec:
   clusterIP: 10.152.183.111
+=======
+    time: "2020-05-12T22:37:51Z"
+  name: kubernetes-dashboard
+  namespace: kube-system
+  resourceVersion: "134"
+  selfLink: /api/v1/namespaces/kube-system/services/kubernetes-dashboard
+  uid: ef66b4f6-07b4-4bde-924d-2eee175b058b
+spec:
+  clusterIP: 10.152.183.51
+>>>>>>> fe5316d2f7783f467b52b7317974e0a488883aeb
   ports:
   - port: 443
     protocol: TCP
