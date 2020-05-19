@@ -194,6 +194,10 @@ Vagrant.configure("2") do |config|
     #    policies=netbox \
     #    ttl=1h
 
+    echo "Installing Netbox"
+    microk8s helm3 repo add bootc https://charts.boo.tc
+    microk8s helm3 install netbox bootc/netbox --values /vagrant/netbox-override-values.yaml
+
     
 
   SHELL
