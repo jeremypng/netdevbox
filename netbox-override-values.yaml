@@ -19,3 +19,8 @@ ingress:
     - secretName: netbox-local-tls
       hosts:
         - netbox.local
+
+resources: 
+  requests:
+    cpu: 100m
+    memory: 400Mi

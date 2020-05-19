@@ -60,7 +60,7 @@ Vagrant.configure("2") do |config|
     vb.gui = false
  
     # Customize the amount of memory on the VM:
-    vb.memory = "12288"
+    vb.memory = "14336"
     vb.cpus = 4
     vb.name = "netdevbox"
   end
@@ -196,8 +196,13 @@ Vagrant.configure("2") do |config|
 
     echo "Installing Netbox"
     microk8s helm3 repo add bootc https://charts.boo.tc
+    microk8s helm3 repo update
     microk8s helm3 install netbox bootc/netbox --values /vagrant/netbox-override-values.yaml
 
+    echo "Installing Gitlab CE"
+    microk8s helm3 repo add gitlab https://charts.gitlab.io/
+    microk8s helm3 repo update
+    microk8s helm3 install gitlab gitlab/gitlab --valuse /vagrant/gitlab-override-values.yaml
     
 
   SHELL

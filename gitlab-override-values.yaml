@@ -1,0 +1,39 @@
+# Minimal settings
+global:
+  edition: ce
+  ingress:
+    configureCertmanager: false
+    class: "nginx"
+  hosts:
+    domain: gitlab.local
+    externalIP: 172.31.255.49
+  rails:
+    bootsnap:
+      enabled: false
+# Don't use certmanager, we'll self-sign
+certmanager:
+  install: false
+# Use the `ingress` addon, not our Ingress (can't map 22/80/443)
+nginx-ingress:
+  enabled: false
+gitlab:
+  webservice:
+    minReplicas: 1
+    maxReplicas: 1
+  sidekiq:
+    minReplicas: 1
+    maxReplicas: 1
+  gitlab-shell:
+    minReplicas: 1
+    maxReplicas: 1
+registry:
+  hpa:
+    minReplicas: 1
+    maxReplicas: 1
+prometheus:
+  install: false
+runners:
+  install: false
+  privileged: true
+rbac:
+  create: true
