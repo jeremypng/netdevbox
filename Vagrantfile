@@ -43,7 +43,7 @@ Vagrant.configure("2") do |config|
   # Create a public network, which generally matched to bridged network.
   # Bridged networks make the machine appear as another physical device on
   # your network.
-  config.vm.network "public_network"
+  # config.vm.network "public_network"
 
   # Share an additional folder to the guest VM. The first argument is
   # the path on the host to the actual folder. The second argument is
@@ -110,13 +110,13 @@ Vagrant.configure("2") do |config|
     echo "Sleeping 30"
     echo "Initializing Vault"
     microk8s.kubectl exec -i vault-0 -- vault operator init > /vagrant/vault-seals.txt
-    VAULT_STATUS=`microk8s.kubectl get service|grep vault-ui`
+    VAULT_STATUS="`microk8s.kubectl get service|grep vault-ui`"
     echo $VAULT_STATUS
-    VAULT_ARG5=`echo $VAULT_STATUS|awk '{print $5}'`
+    VAULT_ARG5="`echo $VAULT_STATUS|awk '{print $5}'`"
     echo $VAULT_ARG5
-    VAULT_PORT=${VAULT_ARG5:5:5}
+    VAULT_PORT="${VAULT_ARG5:5:5}"
     echo $VAULT_PORT
-    export VAULT_ADDR=`echo $VAULT_PORT|awk '{print "\"http://127.0.0.1:" $1 "\""}'`
+    export VAULT_ADDR="`echo $VAULT_PORT|awk '{print "http://127.0.0.1:" $1}'`"
     echo $VAULT_ADDR
     echo "Vault URL $VAULT_ADDR"  >> /vagrant/vault-seals.txt
     echo "export VAULT_ADDR=\"$VAULT_ADDR\"" >> /home/vagrant/.bashrc
@@ -140,6 +140,40 @@ Vagrant.configure("2") do |config|
     vault secrets enable -path=secret -description="static versioned KV store" kv-v2
     echo "Adding Bitnami repo to Helm3"
     microk8s helm3 repo add bitnami https://charts.bitnami.com/bitnami
+    echo "Installing Postgresql"
+    PG_PASSWORD="`openssl rand -base64 20`"
+    vault kv put secret/netdevbox/postgresql user="postgres" password="$PG_PASSWORD"
+    microk8s helm3 install netbox-pg -f /vagrant/postgres-override-values.yaml --set postgresqlPassword=$PG_PASSWORD,postgresqlDatabase=netbox bitnami/postgresql
+    echo "Enabling database secrets engine for Vault"
+    vault secrets enable database
+    echo "Waiting for Postgres to come online"
+    while [ (( $PG_READY_COUNT < 4 )) ]
+      do
+        sleep 10
+        PG_READY_ARR=`microk8s.kubectl get pods|grep postgres|awk '{print $2}'`
+        PG_READY_COUNT=0
+        for pg in $PG_READY_ARR
+          do
+            PG_READY_COUNT=$(($PG_READY_COUNT + ${pg:0:1}));
+          done  
+        echo "Postgres pods ready (target 4): $PG_READY_COUNT"
+    echo "Adding netbox-app role to Vault"
+    vault write database/roles/netbox-app \
+      db_name=netbox \
+      creation_statements="CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}'; \
+                           GRANT ALL PRIVILEGES ON DATABASE netbox TO \"{{name}}\";" \
+      revocation_statements="ALTER ROLE \"{{name}}\" NOLOGIN;"\
+      default_ttl="1h" \
+      max_ttl="24h"
+    echo "Adding netbox connection config to Vault"
+    vault write database/config/netbox \
+      plugin_name=postgresql-database-plugin \
+      allowed_roles="*" \
+      connection_url="postgresql://{{username}}:{{password}}@postgres-postgresql:5432/netbox?sslmode=disable" \
+      username="postgres" \
+      password="$PG_PASSWORD"
+    echo "Rotating root postgres password"
+    vault write --force /database/rotate-root/netbox
     echo "Enabling Kubernetes authentication to Vault"
     vault auth enable kubernetes
     echo "Logging into vault on vault pod"
@@ -151,13 +185,20 @@ Vagrant.configure("2") do |config|
        token_reviewer_jwt="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" \
        kubernetes_host=https://${KUBERNETES_PORT_443_TCP_ADDR}:443 \
        kubernetes_ca_cert=@/var/run/secrets/kubernetes.io/serviceaccount/ca.crt'
+    echo "Creating Vault Policy for Netbox App"
+    vault policy write netbox /vagrant/vault-policies/netbox-app.hcl
+    vault write auth/kubernetes/role/netbox-app \
+       bound_service_account_names=netbox-app \
+       bound_service_account_namespaces=netbox \
+       policies=netbox \
+       ttl=1h
 
     
 
   SHELL
 
 # delete default gw on eth0
-  config.vm.provision "shell",
-    run: "always",
-    inline: "eval `route -n | awk '{ if ($8 ==\"enp0s3\" && $2 != \"0.0.0.0\") print \"route del default gw \" $2; }'`"
+  # config.vm.provision "shell",
+  #   run: "always",
+  #   inline: "eval `route -n | awk '{ if ($8 ==\"enp0s3\" && $2 != \"0.0.0.0\") print \"route del default gw \" $2; }'`"
 end
