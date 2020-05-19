@@ -60,8 +60,8 @@ Vagrant.configure("2") do |config|
     vb.gui = false
  
     # Customize the amount of memory on the VM:
-    vb.memory = "14336"
-    vb.cpus = 4
+    vb.memory = "32768"
+    vb.cpus = 8
     vb.name = "netdevbox"
   end
   #
