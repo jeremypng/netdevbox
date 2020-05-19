@@ -174,15 +174,18 @@ Vagrant.configure("2") do |config|
     #   password="$PG_PASSWORD"
     # echo "Rotating root postgres password"
     # vault write --force /database/rotate-root/netbox
-    echo "Enabling Kubernetes authentication to Vault"
-    vault auth enable kubernetes
-    echo "Adding K8S config to Vault"
-    microk8s.kubectl exec $(microk8s.kubectl get pods --selector "app.kubernetes.io/instance=vault,component=server" -o jsonpath="{.items[0].metadata.name}") -c vault --   sh -c ' \
-    vault login $VAULT_ROOT_TOKEN && \
-    vault write auth/kubernetes/config \
-       token_reviewer_jwt="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" \
-       kubernetes_host=https://${KUBERNETES_PORT_443_TCP_ADDR}:443 \
-       kubernetes_ca_cert=@/var/run/secrets/kubernetes.io/serviceaccount/ca.crt'
+    
+    # need to fix this section, won't actually echo the root token to the command
+    # echo "Enabling Kubernetes authentication to Vault"
+    # vault auth enable kubernetes
+    # echo "Adding K8S config to Vault"
+    # microk8s.kubectl exec $(microk8s.kubectl get pods --selector "app.kubernetes.io/instance=vault,component=server" -o jsonpath="{.items[0].metadata.name}") -c vault --   sh -c ' \
+    # vault login `echo $VAULT_ROOT_TOKEN` && \
+    # vault write auth/kubernetes/config \
+    #    token_reviewer_jwt="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" \
+    #    kubernetes_host=https://${KUBERNETES_PORT_443_TCP_ADDR}:443 \
+    #    kubernetes_ca_cert=@/var/run/secrets/kubernetes.io/serviceaccount/ca.crt'
+
     # echo "Creating Vault Policy for Netbox App"
     # vault policy write netbox /vagrant/vault-policies/netbox-app.hcl
     # vault write auth/kubernetes/role/netbox-app \
