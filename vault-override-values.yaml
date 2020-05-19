@@ -4,8 +4,7 @@
     enabled: true
     labels: 
       traffic: external
-    annotations: {}
-      # |
+    annotations: 
       kubernetes.io/ingress.class: nginx
       kubernetes.io/tls-acme: "true"
     hosts:
