@@ -15,7 +15,7 @@ ingress:
         # NB: You may also want to set the basePath above
         - /
 
-  tls: []
-  #  - secretName: chart-example-tls
-  #    hosts:
-  #      - chart-example.local
+  tls: 
+    - secretName: netbox-local-tls
+      hosts:
+        - netbox.local
