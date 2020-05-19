@@ -1,5 +1,4 @@
-  # Ingress allows ingress services to be created to allow external access
-  # from Kubernetes to access Vault pods.
+server:
   ingress:
     enabled: true
     labels: 
@@ -11,13 +10,12 @@
       - host: vault.local
         paths: 
           - /
-
     tls: 
       - secretName: vault-local-tls
         hosts:
           - vault.local
 
- auditStorage:
+  auditStorage:
     enabled: true
 
 ui:
