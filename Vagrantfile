@@ -202,7 +202,7 @@ Vagrant.configure("2") do |config|
     echo "Installing Gitlab CE"
     microk8s helm3 repo add gitlab https://charts.gitlab.io/
     microk8s helm3 repo update
-    microk8s helm3 install gitlab gitlab/gitlab --valuse /vagrant/gitlab-override-values.yaml
+    microk8s helm3 install gitlab gitlab/gitlab --values /vagrant/gitlab-override-values.yaml
     
 
   SHELL
