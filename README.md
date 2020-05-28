@@ -4,9 +4,35 @@
 
 Brings up an Ubuntu server, Installs MicroK8s snap, Installs Vault Helm chart, manual steps to initialize and unseal Vault
 
-Pre-reqs: virtual-box, vagrant
+Dev Environment:
+* Ubuntu 18.0.4
+* VirtualBox 5.2 (not compatible with 6.X!)
+* Vagrant
 
-1. Edit vault-override-values.yaml to reflect local vault DNS name if ingress is needed, NodePort should work for now
+Setup
+* Assign 20GB of ram to the host machine for building. Need 13 gigs to fully boot.
+* If you are using Vmware, assign Hardware Virtualization VT-X to the VM machine running vagrant.
+* Install Ubuntu 18.0.4
+* apt-get install virtualbox
+* apt-get install vagrant
+* VMWare Fusion/ESXi - enable Promiscuous mode on the VSwitch
+* Install disk size plugin below
+``` bash
+ VAGRANT_DISABLE_STRICT_DEPENDENCY_ENFORCEMENT=1 vagrant plugin install vagrant-disksize
+```
+
+# Gitlab Runner Install
+This step downloads the certificate and pushes it to the Gitlab Runner as a secret.
+``` bash 
+openssl s_client -showcerts -connect gitlab.domain.com:443 </dev/null 2>/dev/null|openssl x509 -outform PEM >mycert.pem
+microk8s.kubectl -n gitlab-runner create secret generic gitlab.domain.com --from-file=gitlab.domaiun.com.crt=mycert.pem
+```
+
+# Getting Started
+1. Edit vault-override-values.yaml
+* Coredns-override.yaml
+  Setup your local domain and DNS server. 
+  Microk8s CoreDNS does not use the native DNS on the local box by dafault it uses 8.8.8.8
 2. Run vagrant up
 3. Run vagrant ssh
 4. Setup authentication methods (username/pass for below example)
@@ -18,7 +44,31 @@ Pre-reqs: virtual-box, vagrant
    5. vault list cubbyhole
    6. vault read cubbyhole/dnac-api
    7. Read documentation for further vault usage
-6.  Test access to Kubernets dashboard via URL in vagrant up output
-7.  Test access to Grafana dashboard via http://192.168.33.10:16443
-   1. user/pass in cat /var/snap/microk8s/current/credentials/basic_auth.csv
-8.  Postgres tbd
+5.  Test access to Kubernets dashboard via URL in vagrant up output
+6.  Test access to Grafana dashboard via http://192.168.33.10:16443
+7.  Postgres tbd
+
+# Troubleshooting
+
+## Gitlab Self Signed errors
+Using a self-signed cert prefix every git command with this
+GIT_SSL_NO_VERIFY=true
+
+## Get Root Password
+``` bash
+microk8s.kubectl get secret --namespace gitlab gitlab-gitlab-initial-root-password -ojsonpath='{.data.password}' | base64 --decode ; echo
+134oIjxlcnt1cCoeOnMi4----REDACTED----5MT58YPkB36nH9YIsJR
+```
+
+## Assign Static IP on the Vagrant VM## Optional - 
+Assign a static IP to your vagrant box - edit /etc/netplan/99-vagrant.yaml
+network:
+  version: 2
+  renderer: networkd
+  ethernets:
+    enp3s0:
+      addresses:
+        - 192.123.168.240/24
+      gateway4: 192.168.123.1
+      nameservers:
+          addresses: [192.168.123.253, 8.8.8.8]

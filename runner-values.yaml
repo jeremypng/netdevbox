@@ -1,0 +1,9 @@
+vault.yaml
+gitlabUrl: https://gitlab.domain.com/
+runnerRegistrationToken: "TOKEN"
+concurrent: 10
+checkInternal: 15
+certsSecretName: "gitlab.domain.com"
+rbac:
+  create: false
+  privileged: false

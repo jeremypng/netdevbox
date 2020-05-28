@@ -14,6 +14,7 @@ Vagrant.configure("2") do |config|
   # boxes at https://vagrantcloud.com/search.
   config.vm.box = "ubuntu/bionic64"
   config.vm.hostname = "netdevbox"
+  config.disksize.size = '50GB'
 
   # Disable automatic box update checking. If you disable this, then
   # boxes will only be checked for updates when the user runs
@@ -43,7 +44,15 @@ Vagrant.configure("2") do |config|
   # Create a public network, which generally matched to bridged network.
   # Bridged networks make the machine appear as another physical device on
   # your network.
-  config.vm.network "public_network"
+  config.vm.network "public_network", bridge: "ens160"
+#  config.vm.network "public_network", bridge: "ens160", use_dhcp_assigned_default_route: true, ip: "192.168.123.240", gateway: "192.168.123.1", bootproto: "static"
+  #config.vm.network "public_network", auto_config: false
+  #config.vm.network "private_network", ip: "192.168.123.240"
+
+  # manual ip
+#  config.vm.provision "shell",
+#    run: "always",
+#    inline: "ifconfig enp0s8 192.168.123.240 netmask 255.255.255.0 up"
 
   # Share an additional folder to the guest VM. The first argument is
   # the path on the host to the actual folder. The second argument is
@@ -60,8 +69,8 @@ Vagrant.configure("2") do |config|
     vb.gui = false
  
     # Customize the amount of memory on the VM:
-    vb.memory = "32768"
-    vb.cpus = 8
+    vb.memory = "18768"
+    vb.cpus = 4
     vb.name = "netdevbox"
   end
   #
@@ -73,13 +82,15 @@ Vagrant.configure("2") do |config|
   # documentation for more information about their specific syntax and use.
   config.vm.provision "shell", inline: <<-SHELL
     apt-get update
-    # apt-get install -y apache2
-    echo "Sleeping 10"
-    sleep 10
+    apt-get install ifupdown -y
+    #echo "Sleeping 10"
+    #sleep 10
     echo "Installing MicroK8s"
     snap install microk8s --classic
+    microk8s status --wait-ready
     echo "Enabling dashboard dns storage ingress helm3"
     microk8s.enable dashboard dns storage ingress helm3
+    microk8s enable helm3
     echo "Setting Kubernetes-dashboard to NodePort"
     microk8s.kubectl get service kubernetes-dashboard -n kube-system -o yaml | sed -e 's|type\: ClusterIP|type\: NodePort|' > /vagrant/kubernetes-dashboard.yml
     microk8s.kubectl apply -f /vagrant/kubernetes-dashboard.yml
@@ -104,7 +115,7 @@ Vagrant.configure("2") do |config|
       do
         sleep 10
         VAULT0_STATUS=`microk8s.kubectl get pods|grep vault-0|awk '{print $3}'`
-        echo "Vault status=$VAULT0_STATUS" 
+        echo "Vault status=$VAULT0_STATUS"
       done
     echo "Vault status=$VAULT0_STATUS" 
     echo "Sleeping 30"
@@ -197,14 +208,21 @@ Vagrant.configure("2") do |config|
     echo "Installing Netbox"
     microk8s helm3 repo add bootc https://charts.boo.tc
     microk8s helm3 repo update
-    microk8s helm3 install netbox bootc/netbox --values /vagrant/netbox-override-values.yaml
+    microk8s.kubectl create namesapce netbox
+    microk8s helm3 install -nnamespace netbox netbox bootc/netbox --values /vagrant/netbox-override-values.yaml
+    
+    echo "Overriding DNS per coredns-override.yaml"
+    microk8s.kubectl apply -f coredns.yaml --namespace kube-system
 
     echo "Installing Gitlab CE"
     microk8s helm3 repo add gitlab https://charts.gitlab.io/
     microk8s helm3 repo update
-    microk8s helm3 install gitlab gitlab/gitlab --values /vagrant/gitlab-override-values.yaml
+    microk8s.kubectl create namesapce gitlab
+    microk8s helm3 install gitlab --namespace=gitlab gitlab/gitlab --values /vagrant/gitlab-override-values.yaml
     
-
+    echo "Your Gitlab Root Password"
+    microk8s.kubectl get secret --namespace gitlab gitlab-gitlab-initial-root-password -ojsonpath='{.data.password}' | base64 --decode ; ech
+    
   SHELL
 
 # delete default gw on eth0
