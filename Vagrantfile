@@ -224,7 +224,7 @@ Vagrant.configure("2") do |config|
     microk8s.kubectl get secret --namespace gitlab gitlab-gitlab-initial-root-password -ojsonpath='{.data.password}' | base64 --decode ; ech
 
    echo "Installing K9s Cluster Management Tool"
-   wget https://github.com/derailed/k9s/releases/download/v0.20.1/k9s_Linux_x86_64.tar.gz
+   wget -q https://github.com/derailed/k9s/releases/download/v0.20.1/k9s_Linux_x86_64.tar.gz
    tar -xzf k9s*
 
    echo "Setting up Kube Config and tooling"
