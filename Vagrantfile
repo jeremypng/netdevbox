@@ -228,7 +228,8 @@ Vagrant.configure("2") do |config|
    tar -xzf k9s*
 
    echo "Setting up Kube Config and tooling"
-   microk8s.config > $HOME/.kube/config
+   mkdir /home/vagrant/.kube
+   microk8s.config > /home/vagrant/.kube/config
    snap install kubectl --classic
 
    echo "Installing MetalLB and IP Pool"
