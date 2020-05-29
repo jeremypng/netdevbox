@@ -99,10 +99,10 @@ Vagrant.configure("2") do |config|
     K8S_DASH_ARG5=`microk8s.kubectl -n kube-system get service|grep kubernetes-dashboard|awk '{print $5}'`
     K8S_DASH_PORT=${K8S_DASH_ARG5:5:5}     
     echo "Dashboard URL http://127.0.0.1:$K8S_DASH_PORT" > k8s-dashboard-info.txt
-    echo "Creating netdevbox namespace"
-    microk8s.kubectl create namespace netdevbox
-    microk8s.kubectl config set-context --current --namespace=netdevbox
-    echo "microk8s.kubectl config set-context --current --namespace=netdevbox" >> /home/vagrant/.bashrc
+    echo "Creating vault namespace"
+    microk8s.kubectl create namespace valut
+    microk8s.kubectl config set-context --current --namespace=vault
+    echo "microk8s.kubectl config set-context --current --namespace=vault" >> /home/vagrant/.bashrc
     echo "Installing Hashicorp Vault"
     microk8s helm3 install --values=/vagrant/vault-override-values.yaml vault https://github.com/hashicorp/vault-helm/archive/v0.5.0.tar.gz
     echo "Adding Vagrant user to MicroK8s admins"
@@ -208,21 +208,25 @@ Vagrant.configure("2") do |config|
     echo "Installing Netbox"
     microk8s helm3 repo add bootc https://charts.boo.tc
     microk8s helm3 repo update
-    microk8s.kubectl create namesapce netbox
-    microk8s helm3 install -nnamespace netbox netbox bootc/netbox --values /vagrant/netbox-override-values.yaml
+    microk8s.kubectl create namespace netbox
+    microk8s helm3 install --namespace netbox netbox bootc/netbox --values /vagrant/netbox-override-values.yaml
     
     echo "Overriding DNS per coredns-override.yaml"
-    microk8s.kubectl apply -f coredns.yaml --namespace kube-system
+    microk8s.kubectl apply -f /vagrant/coredns-override.yaml --namespace kube-system
 
     echo "Installing Gitlab CE"
     microk8s helm3 repo add gitlab https://charts.gitlab.io/
     microk8s helm3 repo update
-    microk8s.kubectl create namesapce gitlab
+    microk8s.kubectl create namespace gitlab
     microk8s helm3 install gitlab --namespace=gitlab gitlab/gitlab --values /vagrant/gitlab-override-values.yaml
     
     echo "Your Gitlab Root Password"
     microk8s.kubectl get secret --namespace gitlab gitlab-gitlab-initial-root-password -ojsonpath='{.data.password}' | base64 --decode ; ech
-    
+
+   echo "Installing K9s Cluster Management Tool"
+   wget https://github.com/derailed/k9s/releases/download/v0.20.1/k9s_Linux_x86_64.tar.gz
+   tar -xzf k9s*
+
   SHELL
 
 # delete default gw on eth0
