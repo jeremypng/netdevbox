@@ -21,23 +21,32 @@ Setup
  VAGRANT_DISABLE_STRICT_DEPENDENCY_ENFORCEMENT=1 vagrant plugin install vagrant-disksize
 ```
 
-# Gitlab Runner Install
+
+
+# Getting Started
+1. Edit Settings
+* vault-override-values.yaml - IP Addresses
+* Coredns-override.yaml - DNS domain name and server
+  Setup your local domain and DNS server. 
+  Microk8s CoreDNS does not use the native DNS on the local box by dafault it uses 8.8.8.8
+2. Run vagrant up
+3. Update Promiscuous mode on the Virtualbox Bridged Adapter
+4. Run vagrant ssh
+5. Wait for Gitlab to finish - can't get the certificate till it's done, takes a long time.
+   ``` bash 
+   watch kubectl get pod -n gitlab 
+   ``` 
+6. Gitlab Runner Install
+   
 This step downloads the certificate and pushes it to the Gitlab Runner as a secret.
 ``` bash 
 openssl s_client -showcerts -connect gitlab.domain.com:443 </dev/null 2>/dev/null|openssl x509 -outform PEM >mycert.pem
 microk8s.kubectl -n gitlab-runner create secret generic gitlab.domain.com --from-file=gitlab.domaiun.com.crt=mycert.pem
 ```
 
-# Getting Started
-1. Edit vault-override-values.yaml
-* Coredns-override.yaml
-  Setup your local domain and DNS server. 
-  Microk8s CoreDNS does not use the native DNS on the local box by dafault it uses 8.8.8.8
-2. Run vagrant up
-3. Update Promiscuous mode on the Virtualbox Bridged Adapter
-4. Run vagrant ssh
-5. Setup authentication methods (username/pass for below example)
-6.  Test from client on laptop
+# Changing Authentication to the Box
+1. Setup authentication methods (username/pass for below example)
+2.  Test from client on laptop
    1. brew install vault
    2. export VAULT_ADDR=#URL from vault-seals.txt
    3. vault login -method=userpass username=#username
@@ -45,9 +54,9 @@ microk8s.kubectl -n gitlab-runner create secret generic gitlab.domain.com --from
    5. vault list cubbyhole
    6. vault read cubbyhole/dnac-api
    7. Read documentation for further vault usage
-7.  Test access to Kubernets dashboard via URL in vagrant up output
-8.  Test access to Grafana dashboard via http://192.168.33.10:16443
-9.  Postgres tbd
+3.  Test access to Kubernets dashboard via URL in vagrant up output
+4.  Test access to Grafana dashboard via http://192.168.33.10:16443
+5.  Postgres tbd
 
 # Troubleshooting
 
