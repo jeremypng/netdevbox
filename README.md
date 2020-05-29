@@ -34,9 +34,10 @@ microk8s.kubectl -n gitlab-runner create secret generic gitlab.domain.com --from
   Setup your local domain and DNS server. 
   Microk8s CoreDNS does not use the native DNS on the local box by dafault it uses 8.8.8.8
 2. Run vagrant up
-3. Run vagrant ssh
-4. Setup authentication methods (username/pass for below example)
-5.  Test from client on laptop
+3. Update Promiscuous mode on the Virtualbox Bridged Adapter
+4. Run vagrant ssh
+5. Setup authentication methods (username/pass for below example)
+6.  Test from client on laptop
    1. brew install vault
    2. export VAULT_ADDR=#URL from vault-seals.txt
    3. vault login -method=userpass username=#username
@@ -44,9 +45,9 @@ microk8s.kubectl -n gitlab-runner create secret generic gitlab.domain.com --from
    5. vault list cubbyhole
    6. vault read cubbyhole/dnac-api
    7. Read documentation for further vault usage
-5.  Test access to Kubernets dashboard via URL in vagrant up output
-6.  Test access to Grafana dashboard via http://192.168.33.10:16443
-7.  Postgres tbd
+7.  Test access to Kubernets dashboard via URL in vagrant up output
+8.  Test access to Grafana dashboard via http://192.168.33.10:16443
+9.  Postgres tbd
 
 # Troubleshooting
 

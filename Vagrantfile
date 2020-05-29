@@ -227,6 +227,14 @@ Vagrant.configure("2") do |config|
    wget https://github.com/derailed/k9s/releases/download/v0.20.1/k9s_Linux_x86_64.tar.gz
    tar -xzf k9s*
 
+   echo "Setting up Kube Config and tooling"
+   microk8s.config > $HOME/.kube/config
+   snap install kubectl --classic
+
+   echo "Installing MetalLB and IP Pool"
+   microk8s.enable metallb:192.168.123.241-192.168.123.243
+   
+   echo "Don't forget to set Promiscuous mode on the VM Bridged Adapter!"
   SHELL
 
 # delete default gw on eth0
