@@ -219,9 +219,6 @@ Vagrant.configure("2") do |config|
     microk8s helm3 repo update
     microk8s.kubectl create namespace gitlab
     microk8s helm3 install gitlab --namespace=gitlab gitlab/gitlab --values /vagrant/gitlab-override-values.yaml
-    
-    echo "Your Gitlab Root Password"
-    microk8s.kubectl get secret --namespace gitlab gitlab-gitlab-initial-root-password -ojsonpath='{.data.password}' | base64 --decode ; ech
 
    echo "Installing K9s Cluster Management Tool"
    wget -q https://github.com/derailed/k9s/releases/download/v0.20.1/k9s_Linux_x86_64.tar.gz
@@ -241,6 +238,9 @@ Vagrant.configure("2") do |config|
    echo "Installing MetalLB and IP Pool"
    microk8s.enable metallb:192.168.123.241-192.168.123.243
    
+   echo "Your Gitlab Root Password"
+   microk8s.kubectl get secret --namespace gitlab gitlab-gitlab-initial-root-password -ojsonpath='{.data.password}' | base64 --decode ; echo ""
+
    echo "Don't forget to set Promiscuous mode on the VM Bridged Adapter!"
   SHELL
 

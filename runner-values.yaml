@@ -1,5 +1,4 @@
-vault.yaml
-gitlabUrl: https://gitlab.domain.com/
+gitlabUrl: http://gitlab-webservice.gitlab.svc.cluster.local:8080
 runnerRegistrationToken: "TOKEN"
 concurrent: 10
 checkInternal: 15
