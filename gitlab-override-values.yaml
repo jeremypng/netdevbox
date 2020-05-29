@@ -19,7 +19,8 @@ certmanager:
 # Use the `ingress` addon, not our Ingress (can't map 22/80/443)
 nginx-ingress:
   enabled: true
-  tcp: {} # disable binding to `22` on host
+  tcp: {} # disable binding to `22` on host 
+  controller:
     hostNetwork: false
     daemonset:
       useHostPort: false
