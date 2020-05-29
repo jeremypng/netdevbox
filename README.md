@@ -38,7 +38,7 @@ vagrant up
 2. Run vagrant up
 3. Update Promiscuous mode on the Virtualbox Bridged Adapter
 4. Run vagrant ssh
-5. Wait for Gitlab to finish - can't get the certificate till it's done, takes a long time.
+5. Wait for Gitlab services to go Running - about 30 minutes for me.
    ``` bash 
    watch kubectl get pod -n gitlab 
    ``` 

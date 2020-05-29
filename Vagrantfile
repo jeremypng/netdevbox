@@ -232,6 +232,12 @@ Vagrant.configure("2") do |config|
    microk8s.config > /home/vagrant/.kube/config
    snap install kubectl --classic
 
+   echo "Installing Gitlab Runner"
+   microk8s.helm3 repo add gitlab https://charts.gitlab.io
+   microk8s.helm3 repo update
+   microk8s.kubectl create namespace gitlab-runner
+   microk8s.helm3 install --namespace gitlab-runner  gitlab-runner -f runner-values.yaml gitlab/gitlab-runner
+
    echo "Installing MetalLB and IP Pool"
    microk8s.enable metallb:192.168.123.241-192.168.123.243
    
