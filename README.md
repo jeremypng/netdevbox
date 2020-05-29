@@ -27,6 +27,7 @@ Setup
 1. Edit Settings
 * vault-override-values.yaml - IP Addresses
 * Coredns-override.yaml - DNS domain name and server
+* gitlab-override-values.yaml - domain.com
   Setup your local domain and DNS server. 
   Microk8s CoreDNS does not use the native DNS on the local box by dafault it uses 8.8.8.8
 2. Run vagrant up
