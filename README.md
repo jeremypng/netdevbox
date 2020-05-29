@@ -1,4 +1,4 @@
-# netdevbox
+# NetDevBox Lab
 
 **DevOps Lab Environment Build Instructions**
 
@@ -6,15 +6,20 @@ Brings up an Ubuntu server, Installs MicroK8s snap, Installs Vault Helm chart, m
 
 Dev Environment:
 * Ubuntu 18.0.4
-* VirtualBox 5.2 (not compatible with 6.X!)
+* VirtualBox 5.2 (not compatible with 6.X)
 * Vagrant
 
 Setup
-* Assign 20GB of ram to the host machine for building. Need 13 gigs to fully boot.
-* If you are using Vmware, assign Hardware Virtualization VT-X to the VM machine running vagrant.
+* Assign 20GB of ram to the host machine for building.
+* If you are using Vmware, assign Hardware Virtualization VT-X to the VM host.
 * Install Ubuntu 18.0.4
-* apt-get install virtualbox
-* apt-get install vagrant
+``` bash 
+apt-get install virtualbox
+apt-get install vagrant
+git clone https://github.com/jeremypng/netdevbox.git
+cd netdevbox
+vagrant up
+``` 
 * VMWare Fusion/ESXi - enable Promiscuous mode on the VSwitch
 * Install disk size plugin below
 ``` bash

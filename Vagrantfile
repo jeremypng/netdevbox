@@ -100,7 +100,7 @@ Vagrant.configure("2") do |config|
     K8S_DASH_PORT=${K8S_DASH_ARG5:5:5}     
     echo "Dashboard URL http://127.0.0.1:$K8S_DASH_PORT" > k8s-dashboard-info.txt
     echo "Creating vault namespace"
-    microk8s.kubectl create namespace valut
+    microk8s.kubectl create namespace vault
     microk8s.kubectl config set-context --current --namespace=vault
     echo "microk8s.kubectl config set-context --current --namespace=vault" >> /home/vagrant/.bashrc
     echo "Installing Hashicorp Vault"
@@ -138,7 +138,7 @@ Vagrant.configure("2") do |config|
     microk8s.kubectl exec -i vault-0 -- vault operator unseal `cat /vagrant/vault-seals.txt |grep "Key 3"|awk '{print $4}'`
     echo "Setting up vault env"
     apt-get install unzip
-    wget -P /home/vagrant https://releases.hashicorp.com/vault/1.4.1/vault_1.4.1_linux_amd64.zip
+    wget -q /home/vagrant https://releases.hashicorp.com/vault/1.4.1/vault_1.4.1_linux_amd64.zip
     cd /home/vagrant
     unzip vault_1.4.1_linux_amd64.zip
     cp vault /usr/local/sbin
@@ -149,8 +149,8 @@ Vagrant.configure("2") do |config|
     vault policy write provisioner /vagrant/vault-policies/provisioner-policy.hcl
     echo "Enabling v2 secrets engine for Vault"
     vault secrets enable -path=secret -description="static versioned KV store" kv-v2
-    echo "Adding Bitnami repo to Helm3"
-    microk8s helm3 repo add bitnami https://charts.bitnami.com/bitnami
+    #echo "Adding Bitnami repo to Helm3"
+    #microk8s helm3 repo add bitnami https://charts.bitnami.com/bitnami
     # echo "Installing Postgresql"
     # PG_PASSWORD="`openssl rand -base64 20`"
     # vault kv put secret/netdevbox/postgresql user="postgres" password="$PG_PASSWORD"
